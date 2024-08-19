@@ -1,4 +1,5 @@
-defmodule Makeup.Lexers.JsLexer do
+defmodule Makeup.Lexers.TsLexer do
+
   @external_resource "README.md"
   @moduledoc @external_resource
              |> File.read!()
@@ -7,7 +8,7 @@ defmodule Makeup.Lexers.JsLexer do
 
   import Makeup.Lexer.Combinators
   import Makeup.Lexer.Groups
-  import Makeup.Lexers.JsLexer.Helper
+  import Makeup.Lexers.TsLexer.Helper
   import NimbleParsec
 
   @behaviour Makeup.Lexer

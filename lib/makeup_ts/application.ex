@@ -1,14 +1,14 @@
-defmodule MakeupJs.Application do
+defmodule MakeupTs.Application do
   @moduledoc false
   use Application
 
   alias Makeup.Registry
 
   def start(_type, _args) do
-    Registry.register_lexer(Makeup.Lexers.JsLexer,
+    Registry.register_lexer(Makeup.Lexers.TsLexer,
       options: [],
-      names: ["js", "javascript"],
-      extensions: ["js"]
+      names: ["js", "javascript", "ts", "typescript"],
+      extensions: ["js", "ts"]
     )
 
     Supervisor.start_link([], strategy: :one_for_one)

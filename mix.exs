@@ -1,14 +1,14 @@
-defmodule MakeupJs.MixProject do
+defmodule MakeupTs.MixProject do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "0.2.0"
 
-  @url "https://github.com/maartenvanvliet/makeup_js"
+  @url "https://github.com/begedin/makeup_ts"
   def project do
     [
-      app: :makeup_js,
-      version: "0.1.0",
-      elixir: "~> 1.12",
+      app: :makeup_ts,
+      version: "0.2.0",
+      elixir: "~> 1.16",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       # Package
@@ -27,13 +27,14 @@ defmodule MakeupJs.MixProject do
 
   defp description do
     """
-    Js lexer for the Makeup syntax highlighter.
+    Typescript and Javascript lexer for the Makeup syntax highlighter.
+    Forked from https://github.com/maartenvanvliet/makeup_js
     """
   end
 
   defp package do
     [
-      maintainers: ["Maarten van Vliet"],
+      maintainers: ["Nikola Begedin", "Maarten van Vliet"],
       licenses: ["MIT"],
       links: %{"GitHub" => @url},
       files: ~w(LICENSE README.md lib mix.exs .formatter.exs)
@@ -44,14 +45,14 @@ defmodule MakeupJs.MixProject do
   def application do
     [
       extra_applications: [],
-      mod: {MakeupJs.Application, []}
+      mod: {MakeupTs.Application, []}
     ]
   end
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:makeup, "~> 1.0"}
+      {:makeup, "~> 1.1"}
     ]
   end
 
@@ -59,7 +60,7 @@ defmodule MakeupJs.MixProject do
     [
       extras: ["README.md"],
       source_ref: "v#{@version}",
-      main: "Makeup.Lexers.CLexer"
+      main: "Makeup.Lexers.TSLexer"
     ]
   end
 
@@ -71,8 +72,8 @@ defmodule MakeupJs.MixProject do
       raise "cannot build docs because escript for ex_doc is not installed"
     end
 
-    args = ["MakeupJs", @version, Mix.Project.compile_path()]
-    opts = ~w[--main Makeup.Lexers.JsLexer --source-ref v#{@version} --source-url #{@url}]
+    args = ["MakeupTs", @version, Mix.Project.compile_path()]
+    opts = ~w[--main Makeup.Lexers.TsLexer --source-ref v#{@version} --source-url #{@url}]
     System.cmd(ex_doc, args ++ opts)
     Mix.shell().info("Docs built successfully")
   end
