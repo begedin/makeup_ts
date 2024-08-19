@@ -1,14 +1,7 @@
-defmodule Makeup.Lexers.TsLexer do
-
-  @external_resource "README.md"
-  @moduledoc @external_resource
-             |> File.read!()
-             |> String.split("<!-- MDOC !-->")
-             |> Enum.fetch!(1)
-
+defmodule MakeupTS.Lexer do
   import Makeup.Lexer.Combinators
   import Makeup.Lexer.Groups
-  import Makeup.Lexers.TsLexer.Helper
+  import MakeupTS.Helper
   import NimbleParsec
 
   @behaviour Makeup.Lexer
@@ -63,7 +56,7 @@ defmodule Makeup.Lexers.TsLexer do
   operator_name = word_from_list(~W(
       -> + -  * / % ++ -- ~ ^ & && | ||
       =  += -= *= /= &= |= %= ^= << >>
-      <<= >>= > < >= <= == != ! ? :
+      <<= >>= > < >= <= == != ! ? : =>
     ))
 
   operator = token(operator_name, :operator)
@@ -86,7 +79,7 @@ defmodule Makeup.Lexers.TsLexer do
 
   delimiters_punctuation =
     word_from_list(
-      ~W( ( \) [ ] { }),
+      ~W| ( ) [ ] { } < >|,
       :punctuation
     )
 
@@ -184,8 +177,8 @@ defmodule Makeup.Lexers.TsLexer do
   @inline false
 
   @doc false
-  def __as_js_language__({ttype, meta, value}) do
-    {ttype, Map.put(meta, :language, :js), value}
+  def __as_ts_language__({ttype, meta, value}) do
+    {ttype, Map.put(meta, :language, :ts), value}
   end
 
   # Semi-public API: these two functions can be used by someone who wants to
@@ -195,7 +188,7 @@ defmodule Makeup.Lexers.TsLexer do
   # @impl Makeup.Lexer
   defparsec(
     :root_element,
-    root_element_combinator |> map({__MODULE__, :__as_js_language__, []}),
+    root_element_combinator |> map({__MODULE__, :__as_ts_language__, []}),
     inline: @inline
   )
 
@@ -330,35 +323,125 @@ defmodule Makeup.Lexers.TsLexer do
 
   defp postprocess_helper([]), do: []
 
-  defp postprocess_helper([{:name, attrs, text} | tokens]) when text in @operator_word,
-    do: [{:operator_word, attrs, text} | postprocess_helper(tokens)]
+  defp postprocess_helper([
+         {:name, _, _} = variable,
+         {:operator, _, ":"} = colon,
+         {:whitespace, _, " "} = space,
+         {:name, attrs, text}
+         | tokens
+       ]) do
+    [variable, colon, space, {:keyword_type, attrs, text} | postprocess_helper(tokens)]
+  end
 
-  defp postprocess_helper([{:name, attrs, text} | tokens]) when text in @keyword_declarations,
-    do: [{:keyword_declaration, attrs, text} | postprocess_helper(tokens)]
-
-  defp postprocess_helper([{:name, attrs, text} | tokens]) when text in @keyword_constant,
-    do: [{:keyword_constant, attrs, text} | postprocess_helper(tokens)]
-
-  defp postprocess_helper([{:name, attrs, text} | tokens]) when text in @keyword_reserved,
-    do: [{:keyword_reserved, attrs, text} | postprocess_helper(tokens)]
-
-  defp postprocess_helper([{:name, attrs, builtin} | tokens]) when builtin in @builtin_words do
+  defp postprocess_helper([
+         {:punctuation, _, ")"} = function_args_close_parens,
+         {:operator, _, ":"} = colon,
+         {:whitespace, _, " "} = space,
+         {:name, attrs, text}
+         | tokens
+       ]) do
     [
-      {:name_builtin, attrs, builtin}
-      | postprocess_helper(tokens)
+      function_args_close_parens,
+      colon,
+      space,
+      {:keyword_type, attrs, text} | postprocess_helper(tokens)
     ]
   end
 
+  defp postprocess_helper([
+         {:name, attrs_1, ~c"class"},
+         {:whitespace, _, " "} = space,
+         {:name, attrs_2, text_3} | tokens
+       ]) do
+    [
+      {:keyword_declaration, attrs_1, ~c"class"},
+      space,
+      {:keyword_type, attrs_2, text_3} | postprocess_helper(tokens)
+    ]
+  end
+
+  defp postprocess_helper([
+         {:punctuation, _, "<"} = open,
+         {:name, attrs, text},
+         {:punctuation, _, ">"} = close | tokens
+       ]) do
+    [open, {:keyword_type, attrs, text}, close | postprocess_helper(tokens)]
+  end
+
+  # expr1 extends expr2
+
+  defp postprocess_helper([
+         {:name, attrs_left, text_left},
+         {:whitespace, _, _} = space_1,
+         {:name, attrs_extends, ~c"extends"},
+         {:whitespace, _, _} = space_2,
+         {:name, attrs_right, text_right} | tokens
+       ]) do
+    [
+      {:keyword_type, attrs_left, text_left},
+      space_1,
+      {:keyword_reserved, attrs_extends, ~c"extends"},
+      space_2,
+      {:keyword_type, attrs_right, text_right} | postprocess_helper(tokens)
+    ]
+  end
+
+  defp postprocess_helper([
+         {:name, attrs, text},
+         {:whitespace, _, _} = space,
+         {:name, attrs_2, ~c"extends"} | tokens
+       ]) do
+    [
+      {:keyword_type, attrs, text},
+      space,
+      {:keyword_reserved, attrs_2, ~c"extends"} | postprocess_helper(tokens)
+    ]
+  end
+
+  defp postprocess_helper([
+         {:name, attrs, ~c"extends"},
+         {:whitespace, _, _} = space,
+         {:name, attrs_2, text} | tokens
+       ]) do
+    [
+      {:keyword_reserved, attrs, ~c"extends"},
+      space,
+      {:keyword_type, attrs_2, text} | postprocess_helper(tokens)
+    ]
+  end
+
+  defp postprocess_helper([{:name, attrs, text} | tokens]) when text in @operator_word do
+    [{:operator_word, attrs, text} | postprocess_helper(tokens)]
+  end
+
+  defp postprocess_helper([{:name, attrs, text} | tokens]) when text in @keyword_declarations do
+    [{:keyword_declaration, attrs, text} | postprocess_helper(tokens)]
+  end
+
+  defp postprocess_helper([{:name, attrs, text} | tokens]) when text in @keyword_constant do
+    [{:keyword_constant, attrs, text} | postprocess_helper(tokens)]
+  end
+
+  defp postprocess_helper([{:name, attrs, text} | tokens]) when text in @keyword_reserved do
+    [{:keyword_reserved, attrs, text} | postprocess_helper(tokens)]
+  end
+
+  defp postprocess_helper([{:name, attrs, builtin} | tokens]) when builtin in @builtin_words do
+    [{:name_builtin, attrs, builtin} | postprocess_helper(tokens)]
+  end
+
   # match function names. They are followed by parens...
-  defp postprocess_helper([{:name, attrs, text}, {:punctuation, %{language: :js}, "("} | tokens]) do
+  defp postprocess_helper([{:name, attrs, text}, {:punctuation, %{language: :ts}, "("} | tokens]) do
     [
       {:name_function, attrs, text},
-      {:punctuation, %{language: :js}, "("} | postprocess_helper(tokens)
+      {:punctuation, %{language: :ts}, "("} | postprocess_helper(tokens)
     ]
   end
 
   # Otherwise, don't do anything with the current token and go to the next token.
-  defp postprocess_helper([token | tokens]), do: [token | postprocess_helper(tokens)]
+  defp postprocess_helper([token | tokens]) do
+    [token | postprocess_helper(tokens)]
+  end
 
   ###################################################################
   # Step #3: highlight matching delimiters
@@ -367,24 +450,20 @@ defmodule Makeup.Lexers.TsLexer do
   @impl Makeup.Lexer
   defgroupmatcher(:match_groups,
     parentheses: [
-      open: [[{:punctuation, %{language: :js}, "("}]],
-      close: [[{:punctuation, %{language: :js}, ")"}]]
+      open: [[{:punctuation, %{language: :ts}, "("}]],
+      close: [[{:punctuation, %{language: :ts}, ")"}]]
     ],
     list: [
-      open: [
-        [{:punctuation, %{language: :js}, "["}]
-      ],
-      close: [
-        [{:punctuation, %{language: :js}, "]"}]
-      ]
+      open: [[{:punctuation, %{language: :ts}, "["}]],
+      close: [[{:punctuation, %{language: :ts}, "]"}]]
     ],
     curly: [
-      open: [
-        [{:punctuation, %{language: :js}, "{"}]
-      ],
-      close: [
-        [{:punctuation, %{language: :js}, "}"}]
-      ]
+      open: [[{:punctuation, %{language: :ts}, "{"}]],
+      close: [[{:punctuation, %{language: :ts}, "}"}]]
+    ],
+    cast: [
+      open: [[{:punctuation, %{language: :ts}, "<"}]],
+      close: [[{:punctuation, %{language: :ts}, ">"}]]
     ]
   )
 

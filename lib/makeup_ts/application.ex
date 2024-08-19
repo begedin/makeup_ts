@@ -5,7 +5,7 @@ defmodule MakeupTs.Application do
   alias Makeup.Registry
 
   def start(_type, _args) do
-    Registry.register_lexer(Makeup.Lexers.TsLexer,
+    Registry.register_lexer(MakeupTS.Lexer,
       options: [],
       names: ["js", "javascript", "ts", "typescript"],
       extensions: ["js", "ts"]
