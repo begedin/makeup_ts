@@ -34,7 +34,7 @@ defmodule MakeupTs.MixProject do
 
   defp package do
     [
-      maintainers: ["Nikola Begedin", "Maarten van Vliet"],
+      maintainers: ["Nikola Begedin"],
       licenses: ["MIT"],
       links: %{"GitHub" => @url},
       files: ~w(LICENSE README.md lib mix.exs .formatter.exs)
