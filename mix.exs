@@ -1,13 +1,13 @@
 defmodule MakeupTs.MixProject do
   use Mix.Project
 
-  @version "0.2.0"
+  @version "0.2.1"
 
   @url "https://github.com/begedin/makeup_ts"
   def project do
     [
       app: :makeup_ts,
-      version: "0.2.0",
+      version: @version,
       elixir: "~> 1.16",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -45,6 +45,7 @@ defmodule MakeupTs.MixProject do
   def application do
     [
       extra_applications: [],
+      deps: deps(),
       mod: {MakeupTs.Application, []}
     ]
   end
@@ -52,7 +53,8 @@ defmodule MakeupTs.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:makeup, "~> 1.1"}
+      {:makeup, "~> 1.1"},
+      {:ex_doc, "~> 0.34", only: :dev}
     ]
   end
 
@@ -60,7 +62,7 @@ defmodule MakeupTs.MixProject do
     [
       extras: ["README.md"],
       source_ref: "v#{@version}",
-      main: "Makeup.Lexers.TSLexer"
+      main: "MakeupTS.Lexer"
     ]
   end
 
@@ -73,7 +75,7 @@ defmodule MakeupTs.MixProject do
     end
 
     args = ["MakeupTs", @version, Mix.Project.compile_path()]
-    opts = ~w[--main Makeup.Lexers.TsLexer --source-ref v#{@version} --source-url #{@url}]
+    opts = ~w[--main MakeupTS.Lexer --source-ref v#{@version} --source-url #{@url}]
     System.cmd(ex_doc, args ++ opts)
     Mix.shell().info("Docs built successfully")
   end
